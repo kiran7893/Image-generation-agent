@@ -1,4 +1,4 @@
-# React Ink Agent
+# Image Generation Agent
 
 A small CLI agent built with React Ink and OpenRouter. It can answer questions and generate images using two different models through OpenRouter based on the user's intent.
 
@@ -26,7 +26,7 @@ npm start
 
 ## Tech Stack & Architecture
 
-- **React Ink**: We use [Ink](https://github.com/vadimdemedes/ink) to build interactive CLI interfaces using React components.
+- **React Ink**: We use React-Ink to build interactive CLI interfaces using React components.
 - **OpenRouter API**: The core AI logic is powered by the OpenAI SDK configured to point to OpenRouter, allowing us to seamlessly switch between different LLMs for text and image tasks.
 - **Subagent Architecture**: The application employs a modular agent pattern. The primary agent handles the conversation loop and tool routing, while specialized subagents (like the image prompt expander) are invoked for specific complex tasks.
-# Image-generation-agent
+
