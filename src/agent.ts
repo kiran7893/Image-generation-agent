@@ -4,7 +4,6 @@ import * as path from "path";
 import dotenv from "dotenv";
 import { expandImagePrompt } from "./agent/imageGenAgent.js";
 import { generateAndSaveImageWithComfy } from "./agent/comfyClient.js";
-import { generateAndSaveImageWithComfyIcu, listComfyIcuWorkflowKeys } from "./agent/comfyIcuClient.js";
 
 // Setup dotenv manually due to ink execution
 dotenv.config();
@@ -14,16 +13,10 @@ export const TEXT_MODEL = process.env.TEXT_MODEL || "openai/gpt-4o-mini";
 const IMAGE_MODEL = process.env.IMAGE_MODEL || "google/imagen-3";
 const IMAGE_BACKEND = (process.env.IMAGE_BACKEND || "comfyui").toLowerCase();
 const COMFYUI_BASE_URL = process.env.COMFYUI_BASE_URL || "http://127.0.0.1:8188";
-const COMFYUI_API_KEY = process.env.COMFYUI_API_KEY || "";
+const COMFYUI_API_KEY = "";
 const COMFYUI_WORKFLOW_PATH = "./src/workflows/comfyui/zimage_standard.json";
 const COMFYUI_POLL_INTERVAL_MS = 1500;
 const COMFYUI_TIMEOUT_MS = 120000;
-const COMFYICU_BASE_URL = process.env.COMFYICU_BASE_URL || "https://comfy.icu";
-const COMFYICU_API_KEY = process.env.COMFYICU_API_KEY || "";
-const COMFYICU_ACCELERATOR = process.env.COMFYICU_ACCELERATOR || "T4";
-const COMFYICU_POLL_INTERVAL_MS = 2000;
-const COMFYICU_TIMEOUT_MS = 180000;
-let selectedComfyIcuWorkflowKey: string | undefined;
 
 export const openrouter = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
@@ -41,9 +34,6 @@ If the user just talks or asks questions, reply normally in text, offering advic
 If the user asks you to generate, create, or draw an image, you MUST call the "generate_image" tool with the full image prompt. Be concise.`;
 
 export async function chat(messages: Message[], onUpdate: (text: string) => void): Promise<string> {
-    const commandResult = await tryHandleCommands(messages);
-    if (commandResult) return commandResult;
-
     const fullMessages = [{ role: "system", content: systemPrompt }, ...messages] as any[];
 
     try {
@@ -77,11 +67,7 @@ export async function chat(messages: Message[], onUpdate: (text: string) => void
                     const args = JSON.parse(toolCall.function.arguments || "{}");
                     onUpdate(`Expanding prompt: "${args.prompt}"...`);
                     const { prompt: detailedPrompt, negativePrompt } = await expandImagePrompt(args.prompt);
-                    const backendLabel = IMAGE_BACKEND === "openrouter"
-                        ? `OpenRouter (${IMAGE_MODEL})`
-                        : IMAGE_BACKEND === "comfyicu"
-                            ? `ComfyICU (${COMFYICU_BASE_URL})`
-                            : `ComfyUI (${COMFYUI_BASE_URL})`;
+                    const backendLabel = getBackendLabel();
                     onUpdate(`Generating image with detailed prompt using ${backendLabel}...`);
                     const savedPath = await generateAndSaveImage(detailedPrompt, negativePrompt, onUpdate);
                     return `Image successfully generated and saved to:\n${savedPath}\n\nDetailed Prompt Used:\n${detailedPrompt}\n\nNegative Prompt:\n${negativePrompt}`;
@@ -102,24 +88,7 @@ async function generateAndSaveImage(
     negativePrompt: string,
     onUpdate?: (text: string) => void
 ): Promise<string> {
-    if (IMAGE_BACKEND === "comfyicu") {
-        return generateAndSaveImageWithComfyIcu(
-            prompt,
-            negativePrompt,
-            {
-                baseUrl: COMFYICU_BASE_URL,
-                apiKey: COMFYICU_API_KEY,
-                workflowKey: selectedComfyIcuWorkflowKey,
-                workflowPath: COMFYUI_WORKFLOW_PATH,
-                pollIntervalMs: COMFYICU_POLL_INTERVAL_MS,
-                timeoutMs: COMFYICU_TIMEOUT_MS,
-                accelerator: COMFYICU_ACCELERATOR
-            },
-            onUpdate
-        );
-    }
-
-    if (IMAGE_BACKEND === "comfyui") {
+    if (IMAGE_BACKEND === "comfyui" || IMAGE_BACKEND === "comfyui_wrapper") {
         return generateAndSaveImageWithComfy(
             prompt,
             negativePrompt,
@@ -134,36 +103,22 @@ async function generateAndSaveImage(
         );
     }
 
-    return generateAndSaveImageWithOpenRouter(prompt, negativePrompt);
+    if (IMAGE_BACKEND === "openrouter") {
+        return generateAndSaveImageWithOpenRouter(prompt, negativePrompt);
+    }
+
+    throw new Error(
+        `Unsupported IMAGE_BACKEND "${IMAGE_BACKEND}". ` +
+        `Use "comfyui", "comfyui_wrapper", or "openrouter".`
+    );
 }
 
-async function tryHandleCommands(messages: Message[]): Promise<string | null> {
-    const latestUserMessage = [...messages].reverse().find((m) => m.role === "user")?.content?.trim() || "";
-
-    if (!latestUserMessage.startsWith("/")) return null;
-
-    if (latestUserMessage === "/workflows") {
-        const { defaultWorkflowKey, keys } = await listComfyIcuWorkflowKeys();
-        if (keys.length === 0) {
-            return "No ComfyICU workflows found. Add entries in src/workflows/comfyicu/workflow-registry.json.";
-        }
-
-        const current = selectedComfyIcuWorkflowKey || defaultWorkflowKey || "(none)";
-        const lines = keys.map((key) => `- ${key}${key === current ? " (current)" : ""}`);
-        return `ComfyICU workflows:\n${lines.join("\n")}\n\nCurrent workflow key: ${current}`;
+function getBackendLabel(): string {
+    if (IMAGE_BACKEND === "openrouter") return `OpenRouter (${IMAGE_MODEL})`;
+    if (IMAGE_BACKEND === "comfyui" || IMAGE_BACKEND === "comfyui_wrapper") {
+        return `ComfyUI wrapper (${COMFYUI_BASE_URL})`;
     }
-
-    if (latestUserMessage.startsWith("/workflow ")) {
-        const key = latestUserMessage.slice("/workflow ".length).trim();
-        const { keys } = await listComfyIcuWorkflowKeys();
-        if (!keys.includes(key)) {
-            return `Unknown workflow key "${key}". Use /workflows to list available keys.`;
-        }
-        selectedComfyIcuWorkflowKey = key;
-        return `ComfyICU workflow switched to: ${key}`;
-    }
-
-    return null;
+    return `Unsupported backend (${IMAGE_BACKEND})`;
 }
 
 async function generateAndSaveImageWithOpenRouter(prompt: string, negativePrompt: string): Promise<string> {
