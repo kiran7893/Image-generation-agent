@@ -32,7 +32,7 @@ export default function App() {
     return (
         <Box flexDirection="column" padding={1}>
             <Box flexDirection="column" marginBottom={1}>
-                <Text bold color="cyan">Image Generation OpenRouter Agent</Text>
+                <Text bold color="cyan">Image Generation Agent (ComfyUI + OpenRouter)</Text>
                 <Text dimColor>Type 'exit' or press Ctrl+C to quit.</Text>
             </Box>
 

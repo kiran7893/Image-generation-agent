@@ -1,0 +1,9 @@
+{
+  "defaultWorkflowKey": "zimage_standard",
+  "workflows": {
+    "zimage_standard": {
+      "workflowId": "hWJwm0uaVBk7guwmAg_im",
+      "description": "ComfyICU workflow id for zimage standard pipeline"
+    }
+  }
+}
