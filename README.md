@@ -17,7 +17,7 @@ A small CLI agent built with React Ink. It can chat via OpenRouter and generate 
    - `IMAGE_BACKEND=comfyui` (default), `IMAGE_BACKEND=comfyicu`, or `IMAGE_BACKEND=openrouter`.
    - `COMFYUI_BASE_URL` for local or hosted ComfyUI (for example `http://127.0.0.1:8188`).
    - Optional: `COMFYUI_API_KEY` for Comfy Cloud or protected endpoints.
-   - For ComfyICU: `COMFYICU_BASE_URL` and `COMFYICU_API_KEY`.
+   - For ComfyICU: `COMFYICU_BASE_URL`, `COMFYICU_API_KEY`, and optional `COMFYICU_ACCELERATOR` (default `T4`).
    - Workflow/poll/timeout are project-managed defaults (no env setup needed).
    - If using OpenRouter images, set `IMAGE_MODEL`.
 
@@ -76,6 +76,7 @@ IMAGE_MODEL=google/imagen-3
 IMAGE_BACKEND=comfyicu
 COMFYICU_BASE_URL=https://comfy.icu
 COMFYICU_API_KEY=your_comfyicu_api_key
+COMFYICU_ACCELERATOR=T4
 ```
 
 Set ComfyICU workflow IDs in `src/workflows/comfyicu/workflow-registry.json` (project-managed), so you can add multiple workflows without putting IDs in `.env`.
@@ -92,6 +93,7 @@ Runtime commands:
 - **Workflow file error**: confirm `src/workflows/comfyui/zimage_standard.json` exists and is valid JSON.
 - **Cloud auth fails (401/403)**: set `COMFYUI_API_KEY` and confirm your Cloud account key is active.
 - **ComfyICU run creation fails**: verify `COMFYICU_API_KEY` and the mapped workflow ID in `src/workflows/comfyicu/workflow-registry.json`.
+- **ComfyICU cost is higher than expected**: set `COMFYICU_ACCELERATOR=T4` (or another cheaper accelerator available in your account/workflow).
 
 ## Tech Stack & Architecture
 

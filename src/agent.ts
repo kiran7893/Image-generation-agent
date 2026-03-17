@@ -20,6 +20,7 @@ const COMFYUI_POLL_INTERVAL_MS = 1500;
 const COMFYUI_TIMEOUT_MS = 120000;
 const COMFYICU_BASE_URL = process.env.COMFYICU_BASE_URL || "https://comfy.icu";
 const COMFYICU_API_KEY = process.env.COMFYICU_API_KEY || "";
+const COMFYICU_ACCELERATOR = process.env.COMFYICU_ACCELERATOR || "T4";
 const COMFYICU_POLL_INTERVAL_MS = 2000;
 const COMFYICU_TIMEOUT_MS = 180000;
 let selectedComfyIcuWorkflowKey: string | undefined;
@@ -111,7 +112,8 @@ async function generateAndSaveImage(
                 workflowKey: selectedComfyIcuWorkflowKey,
                 workflowPath: COMFYUI_WORKFLOW_PATH,
                 pollIntervalMs: COMFYICU_POLL_INTERVAL_MS,
-                timeoutMs: COMFYICU_TIMEOUT_MS
+                timeoutMs: COMFYICU_TIMEOUT_MS,
+                accelerator: COMFYICU_ACCELERATOR
             },
             onUpdate
         );

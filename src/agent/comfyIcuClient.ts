@@ -9,6 +9,7 @@ export interface ComfyIcuConfig {
     workflowPath: string;
     pollIntervalMs: number;
     timeoutMs: number;
+    accelerator?: string;
 }
 
 interface WorkflowRegistry {
@@ -67,15 +68,20 @@ export async function generateAndSaveImageWithComfyIcu(
     const workflowPrompt = await buildApiWorkflowFromFile(config.workflowPath, prompt, negativePrompt);
     onUpdate?.("Submitting workflow to ComfyICU...");
 
+    const runBody: Record<string, unknown> = {
+        prompt: workflowPrompt
+    };
+    if (config.accelerator) {
+        runBody.accelerator = config.accelerator;
+    }
+
     const runResponse = await fetch(`${baseUrl}/api/v1/workflows/${workflowId}/runs`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${config.apiKey}`
         },
-        body: JSON.stringify({
-            prompt: workflowPrompt
-        })
+        body: JSON.stringify(runBody)
     });
 
     if (!runResponse.ok) {
